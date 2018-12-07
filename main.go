@@ -30,11 +30,20 @@ func main(){
 	}
 
 	setUpLog()
-	reader := getCsv(*csvFile)
-	title := getTitle(reader)
+
 	pool := grpool.NewPool(*workerCount, 50)
 	defer pool.Release()
 
+	start(pool, command, csvFile)
+
+	pool.WaitAll()
+	log.Info("finished")
+
+}
+
+func start(pool *grpool.Pool, command *string, csvFile *string) {
+	reader := getCsv(*csvFile)
+	title := getTitle(reader)
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -47,9 +56,6 @@ func main(){
 		constructedCommand := constructCommand(*command, title, record)
 		pool.JobQueue <- func() { execute(constructedCommand) }
 	}
-	pool.WaitAll()
-	log.Info("finished")
-
 }
 
 func constructCommand(command string, title []string, record []string) string {
